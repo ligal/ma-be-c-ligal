@@ -11,26 +11,19 @@ cards.forEach(card => {
     cardsArr.push(Buffer.from('{"id":"' + card.id + '","name":"' + card.name + '"}'));
 });
 
-const allCards = Buffer.from('{"id": "ALL CARDS"}');
-const ready = Buffer.from('{"ready": true}');
+ const allCards = Buffer.from('{"id": "ALL CARDS"}');
+ const ready = Buffer.from('{"ready": true}');
 
 const client = require('redis').createClient()
 client.on('error', (err) => console.log('Redis Client Error', err));
 
 const requestListener = async (req, res) => {
-    if (req.url === "/ready") {
+    if (req.url.charAt(1) === "r") {
         res.setHeader('Content-Length', ready.length)
         res.write(ready);
     } else {
-        const key = req.url.substring(13)
-
-        cardIdx = await client.incr(key) - 1;
-        if (cardIdx >= cardsArr.length) {
-            res.setHeader('Content-Length', allCards.length)
-            res.write(allCards)
-            return
-        }
-        let card = cardsArr[cardIdx] 
+        let card = cardsArr[await client.incr(req.url) - 1] || allCards
+        
         res.setHeader('Content-Length', card.length)
         res.write(card);
     }
